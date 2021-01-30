@@ -11,6 +11,24 @@ class Sudoku:
                     return i, j
         return -1, -1
 
+    def is_valid_position(self, number, row, col):
+        # Check if number is in the row and column
+        board_row = self.board[row]
+        board_col = [self.board[i][col] for i in range(self.size)]
+        if number in board_row or number in board_col:
+            return False
+
+        # Check 3x3 sub-grid
+        grid_size = self.size ** 0.5
+        sub_row = row // grid_size * grid_size
+        sub_col = col // grid_size * grid_size
+        for i in range(sub_row, sub_col + grid_size):
+            for j in range(sub_col, sub_col + grid_size):
+                if self.board[i][j] == number:
+                    return False
+        
+        return True
+
 
 if __name__ == "__main__":
     test_board = [
