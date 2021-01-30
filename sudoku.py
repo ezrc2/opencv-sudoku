@@ -19,16 +19,35 @@ class Sudoku:
             return False
 
         # Check 3x3 sub-grid
-        grid_size = self.size ** 0.5
-        sub_row = row // grid_size * grid_size
-        sub_col = col // grid_size * grid_size
-        for i in range(sub_row, sub_col + grid_size):
+        grid_size = int(self.size ** 0.5)
+        sub_row = (row // grid_size) * grid_size
+        sub_col = (col // grid_size) * grid_size
+        for i in range(sub_row, sub_row + grid_size):
             for j in range(sub_col, sub_col + grid_size):
                 if self.board[i][j] == number:
                     return False
         
         return True
 
+    def solve(self):
+        row, col = self.find_next_empty()
+        if row == col == -1:
+            return True
+
+        for num in range(1, self.size + 1):
+            if self.is_valid_position(num, row, col):
+                self.board[row][col] = num
+                if self.solve():
+                    return True
+
+            self.board[row][col] = -1
+        
+        return False
+
+def print_board(board):
+    for row in board:
+        print(row)
+    print("")
 
 if __name__ == "__main__":
     test_board = [
@@ -42,6 +61,6 @@ if __name__ == "__main__":
         [-1, -1, 6, 1, 2, 8, -1, -1, -1],
         [2, -1, -1, -1, -1, 5, -1, 4, -1]
     ]
-    print(test_board)
-    Sudoku(test_board)
-    print(test_board)
+    sudoku = Sudoku(test_board)
+    sudoku.solve()
+    print_board(sudoku.board)
