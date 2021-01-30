@@ -2,6 +2,14 @@ class Sudoku:
 
     def __init__(self, board):
         self.board = board
+        self.size = len(board)
+
+    def find_next_empty(self):
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.board[i][j] == -1:
+                    return i, j
+        return -1, -1
 
 
 if __name__ == "__main__":
