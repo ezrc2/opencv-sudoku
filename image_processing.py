@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import imutils
+from imutils.perspective import four_point_transform
 
 def find_puzzle_outline(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -8,21 +10,29 @@ def find_puzzle_outline(image):
     thresh = cv2.bitwise_not(thresh)
     #cv2.imshow("thresh", thresh)
     contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    contours = contours[0] if len(contours) == 2 else contours[1]
+    contours = imutils.grab_contours(contours)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
     # Find sudoku outline
+    puzzle_outline = None
     for contour in contours:
         perimeter = cv2.arcLength(contour, True)
         shape = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
         if len(shape) == 4:
-            return shape
+            puzzle_outline = shape
   
-    return None
+    if puzzle_outline == None:
+        print("no puzzle detected")
+        return None, None
     
-def get_corners(corners):
-    corners = [(corner[0][0], corner[0][1]) for corner in corners]
-    # top left, top right, bottom right, bottom left
-    return corners[0], corners[1], corners[2], corners[3]
+    puzzle = four_point_transform(image, puzzle_outline.reshape(4, 2))
+    warped = four_point_transform(gray, puzzle_outline.reshape(4, 2))
+
+    cv2.imshow("puzzle", puzzle)
+    cv2.waitKey(0)
+    
+    return (puzzle, warped)
+
 
 def main():
     cap = cv2.VideoCapture(0)
