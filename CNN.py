@@ -1,7 +1,7 @@
 import numpy as np
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, Dense, Flatten
+from tensorflow.keras.layers import Conv2D, Dense, Flatten, Dropout
 from tensorflow.keras.utils import to_categorical
 
 (X_train, y_train), (X_test, y_test) = mnist.load_data()
@@ -13,6 +13,7 @@ model = Sequential()
 model.add(Conv2D(64, kernel_size=3, activation='relu', input_shape=(28, 28, 1)))
 model.add(Conv2D(32, kernel_size=3, activation='relu'))
 model.add(Flatten())
+model.add(Dropout(0.5))
 model.add(Dense(10, activation='softmax'))
 
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy']) # 10 classes
