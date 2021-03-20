@@ -1,8 +1,11 @@
 import cv2
 import numpy as np
+from sudoku import Sudoku
 from imutils.perspective import four_point_transform
 from imutils.convenience import grab_contours
+from skimage.segmentation import clear_border
 from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing.image import img_to_array
 
 def find_puzzle_outline(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -37,13 +40,14 @@ def find_puzzle_outline(image):
     puzzle = four_point_transform(image, puzzle_outline.reshape(4, 2))
     warped = four_point_transform(gray, puzzle_outline.reshape(4, 2))
 
-    cv2.imshow("puzzle", puzzle)
-    cv2.waitKey(0)
+    # cv2.imshow("puzzle", puzzle)
+    # cv2.waitKey(0)
     
     return (puzzle, warped)
 
 def extract_digit(cell):
     thresh = cv2.threshold(cell, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+    thresh = clear_border(thresh)
     contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours = grab_contours(contours)
 
@@ -59,15 +63,12 @@ def extract_digit(cell):
         return None
 	
     digit = cv2.bitwise_and(thresh, thresh, mask=mask) # apply mask
-
-    cv2.imshow("Digit", digit)
-    cv2.waitKey(0)
     
     return digit
 
 def main():
     # cap = cv2.VideoCapture(0)
-    image = cv2.imread("pictures/sudoku.png")
+    image = cv2.imread("pictures/straight_on.png")
     # while True:
     #     ret, frame = cap.read()
     #     frame = cv2.flip(frame, 1)
@@ -79,8 +80,37 @@ def main():
     puzzle, warped = find_puzzle_outline(image)
     model = load_model("model.h5")
     board = -1 * np.ones((9, 9), dtype="int")
-    # cv2.imshow("Solved puzzle", frame)
-    # cv2.waitKey(0)
+    stepX = warped.shape[1] // 9
+    stepY = warped.shape[0] // 9
+    locations = []
+
+    for i in range(9):
+        row = []
+        for j in range(9):
+            x1 = j * stepX
+            y1 = i * stepY
+            x2 = (j + 1) * stepX
+            y2 = (i + 1) * stepY
+            row.append((x1, y1, x2, y2))
+
+            cell = warped[y1:y2, x1:x2]
+            digit = extract_digit(cell)
+
+            if digit is not None:
+                # cv2.imshow("digit", digit)
+                # cv2.waitKey(0)
+                ROI = cv2.resize(digit, (28, 28))
+                ROI = ROI.astype("float") / 255.0
+                ROI = ROI.reshape(1, 28, 28, 1)
+                prediction = model.predict(ROI).argmax(axis=1)[0]
+                board[i, j] = prediction
+
+    locations.append(row)
+
+    solver = Sudoku(board)
+    solver.solve()
+    for row in board:
+        print(row)
     
 
 
