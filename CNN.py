@@ -20,4 +20,4 @@ model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accur
 
 model.fit(X_train, to_categorical(y_train), epochs=3, validation_data=(X_test, to_categorical(y_test)))
 
-model.save_weights('model.h5')
+model.save('model.h5')
