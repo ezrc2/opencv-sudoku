@@ -1,3 +1,5 @@
+import numpy as np
+
 class Sudoku:
 
     def __init__(self, board):
@@ -50,7 +52,7 @@ def print_board(board):
     print("")
 
 if __name__ == "__main__":
-    test_board = [
+    test_board = np.array([
         [-1, 2, -1, 9, -1, -1, -1, -1, 6],
         [-1, -1, -1, 3, 8, 4, 9, -1, -1],
         [8, 3, -1, -1, -1, -1, -1, 7, -1],
@@ -60,7 +62,7 @@ if __name__ == "__main__":
         [-1, 7, -1, -1, -1, -1, -1, 2, 8],
         [-1, -1, 6, 1, 2, 8, -1, -1, -1],
         [2, -1, -1, -1, -1, 5, -1, 4, -1]
-    ]
+    ])
     sudoku = Sudoku(test_board)
     sudoku.solve()
     print_board(sudoku.board)
