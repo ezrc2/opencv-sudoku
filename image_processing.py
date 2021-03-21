@@ -34,10 +34,8 @@ def find_puzzle_outline(image):
         print("no puzzle detected")
         return None, None
 
-    # output = image.copy()
-    # cv2.drawContours(output, [puzzle_outline], -1, (0, 255, 0), 2)
-    # cv2.imshow("Puzzle Outline", output)
-    # cv2.waitKey(0)
+    output = image.copy()
+    cv2.drawContours(output, [puzzle_outline], -1, (0, 255, 0), 2)
     
     puzzle = four_point_transform(image, puzzle_outline.reshape(4, 2))
     warped = four_point_transform(gray, puzzle_outline.reshape(4, 2))
@@ -45,9 +43,42 @@ def find_puzzle_outline(image):
     # cv2.imshow("puzzle", puzzle)
     # cv2.waitKey(0)
     
-    return (puzzle, warped)
+    return (puzzle, warped, output)
 
-def extract_digit(cell):
+def get_digits(warped):
+    model = load_model("model.h5")
+    board_size = 9
+    board = -1 * np.ones((board_size, board_size), dtype="int")
+    dx = warped.shape[1] // board_size
+    dy = warped.shape[0] // board_size
+    cell_locations = []
+
+    for y in range(board_size):
+        cell_row = []
+        for x in range(board_size):
+            x1 = x * dx
+            y1 = y * dy
+            x2 = (x + 1) * dx
+            y2 = (y + 1) * dy
+            cell_row.append((x1, y1, x2, y2))
+
+            cell = warped[y1:y2, x1:x2]
+            digit = extract_digit_image(cell)
+
+            if digit is not None:
+                # cv2.imshow("digit", digit)
+                # cv2.waitKey(0)
+                ROI = cv2.resize(digit, (28, 28))
+                ROI = ROI.astype("float") / 255.0
+                ROI = ROI.reshape(1, 28, 28, 1)
+                prediction = model.predict(ROI).argmax(axis=1)[0]
+                board[y, x] = prediction
+
+        cell_locations.append(cell_row)
+    
+    return board, cell_locations
+
+def extract_digit_image(cell):
     thresh = cv2.threshold(cell, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
     thresh = clear_border(thresh)
     contours = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -68,52 +99,11 @@ def extract_digit(cell):
     
     return digit
 
-def main():
-    board_size = 9
-    # cap = cv2.VideoCapture(0)
-    image = cv2.imread("pictures/sudoku.png")
-    # while True:
-    #     ret, frame = cap.read()
-    #     frame = cv2.flip(frame, 1)
-    #     cv2.imshow("Camera", frame)
-
-    #     if cv2.waitKey(1) >= 0:
-    #         break
-    puzzle, warped = find_puzzle_outline(image)
-
-    model = load_model("model.h5")
-    board = -1 * np.ones((board_size, board_size), dtype="int")
-    dx = warped.shape[1] // board_size
-    dy = warped.shape[0] // board_size
-    cell_locations = []
-
-    for y in range(board_size):
-        cell_row = []
-        for x in range(board_size):
-            x1 = x * dx
-            y1 = y * dy
-            x2 = (x + 1) * dx
-            y2 = (y + 1) * dy
-            cell_row.append((x1, y1, x2, y2))
-
-            cell = warped[y1:y2, x1:x2]
-            digit = extract_digit(cell)
-
-            if digit is not None:
-                # cv2.imshow("digit", digit)
-                # cv2.waitKey(0)
-                ROI = cv2.resize(digit, (28, 28))
-                ROI = ROI.astype("float") / 255.0
-                ROI = ROI.reshape(1, 28, 28, 1)
-                prediction = model.predict(ROI).argmax(axis=1)[0]
-                board[y, x] = prediction
-
-        cell_locations.append(cell_row)
-    
+def display_solution(board, puzzle, cell_locations):
     original = board.copy()
     solver = Sudoku(board)
     solver.solve()
-    solution = puzzle.copy()
+    solution_image = puzzle.copy()
 
     for i in range(len(cell_locations)):
         row = cell_locations[i]
@@ -123,10 +113,17 @@ def main():
                 x1, y1, x2, y2 = location[0], location[1], location[2], location[3]
                 x = int(0.35 * (x2 - x1) + x1)
                 y = int(0.7 * (y2 - y1) + y1)
-                cv2.putText(solution, str(solver.board[i, j]), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
+                cv2.putText(solution_image, str(solver.board[i, j]), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
 
-    cv2.imshow("Solved Sudoku", solution)
+    cv2.imshow("Solved Sudoku", solution_image)
     cv2.waitKey(0)
+
+
+def main():
+    image = cv2.imread("pictures/sudoku.png")
+    puzzle, warped, output = find_puzzle_outline(image)
+    board, cell_locations = get_digits(warped)
+    display_solution(board, puzzle, cell_locations)
     
 
 if __name__ == "__main__":
