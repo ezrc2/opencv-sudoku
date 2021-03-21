@@ -120,10 +120,18 @@ def display_solution(board, puzzle, cell_locations):
 
 
 def main():
-    image = cv2.imread("pictures/sudoku.png")
-    puzzle, warped, output = find_puzzle_outline(image)
-    board, cell_locations = get_digits(warped)
-    display_solution(board, puzzle, cell_locations)
+    cap = cv2.VideoCapture(0)
+    while True:
+        ret, frame = cap.read() 
+        #frame = cv2.flip(frame, 1)
+        puzzle, warped, output = find_puzzle_outline(frame)
+        if output is not None:
+            cv2.imshow("Camera", output)
+
+        if cv2.waitKey(1) >= 0:
+            board, cell_locations = get_digits(warped)
+            display_solution(board, puzzle, cell_locations)
+            break
     
 
 if __name__ == "__main__":
