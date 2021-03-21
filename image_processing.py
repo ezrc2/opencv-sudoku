@@ -5,7 +5,9 @@ from imutils.perspective import four_point_transform
 from imutils.convenience import grab_contours
 from skimage.segmentation import clear_border
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array
+
+# Credit to https://www.pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/ for 
+# the tutorial on how to find the sudoku puzzle using OpenCV
 
 def find_puzzle_outline(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -67,31 +69,32 @@ def extract_digit(cell):
     return digit
 
 def main():
+    board_size = 9
     # cap = cv2.VideoCapture(0)
-    image = cv2.imread("pictures/straight_on.png")
+    image = cv2.imread("pictures/sudoku.png")
     # while True:
     #     ret, frame = cap.read()
     #     frame = cv2.flip(frame, 1)
     #     cv2.imshow("Camera", frame)
-    #     find_puzzle_outline(frame)
 
     #     if cv2.waitKey(1) >= 0:
     #         break
     puzzle, warped = find_puzzle_outline(image)
-    model = load_model("model.h5")
-    board = -1 * np.ones((9, 9), dtype="int")
-    stepX = warped.shape[1] // 9
-    stepY = warped.shape[0] // 9
-    locations = []
 
-    for i in range(9):
-        row = []
-        for j in range(9):
-            x1 = j * stepX
-            y1 = i * stepY
-            x2 = (j + 1) * stepX
-            y2 = (i + 1) * stepY
-            row.append((x1, y1, x2, y2))
+    model = load_model("model.h5")
+    board = -1 * np.ones((board_size, board_size), dtype="int")
+    dx = warped.shape[1] // board_size
+    dy = warped.shape[0] // board_size
+    cell_locations = []
+
+    for y in range(board_size):
+        cell_row = []
+        for x in range(board_size):
+            x1 = x * dx
+            y1 = y * dy
+            x2 = (x + 1) * dx
+            y2 = (y + 1) * dy
+            cell_row.append((x1, y1, x2, y2))
 
             cell = warped[y1:y2, x1:x2]
             digit = extract_digit(cell)
@@ -103,16 +106,28 @@ def main():
                 ROI = ROI.astype("float") / 255.0
                 ROI = ROI.reshape(1, 28, 28, 1)
                 prediction = model.predict(ROI).argmax(axis=1)[0]
-                board[i, j] = prediction
+                board[y, x] = prediction
 
-    locations.append(row)
-
+        cell_locations.append(cell_row)
+    
+    original = board.copy()
     solver = Sudoku(board)
     solver.solve()
-    for row in board:
-        print(row)
-    
+    solution = puzzle.copy()
 
+    for i in range(len(cell_locations)):
+        row = cell_locations[i]
+        for j in range(len(row)):
+            if original[i][j] == -1:
+                location = row[j]
+                x1, y1, x2, y2 = location[0], location[1], location[2], location[3]
+                x = int(0.35 * (x2 - x1) + x1)
+                y = int(0.7 * (y2 - y1) + y1)
+                cv2.putText(solution, str(solver.board[i, j]), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
+
+    cv2.imshow("Solved Sudoku", solution)
+    cv2.waitKey(0)
+    
 
 if __name__ == "__main__":
     main()  
