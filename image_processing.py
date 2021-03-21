@@ -30,9 +30,9 @@ def find_puzzle_outline(image):
             puzzle_outline = shape
             break
 
-    if not puzzle_outline.all():
+    if puzzle_outline is None:
         print("no puzzle detected")
-        return None, None
+        return None, None, None
 
     output = image.copy()
     cv2.drawContours(output, [puzzle_outline], -1, (0, 255, 0), 2)
@@ -113,7 +113,7 @@ def display_solution(board, puzzle, cell_locations):
                 x1, y1, x2, y2 = location[0], location[1], location[2], location[3]
                 x = int(0.35 * (x2 - x1) + x1)
                 y = int(0.7 * (y2 - y1) + y1)
-                cv2.putText(solution_image, str(solver.board[i, j]), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
+                cv2.putText(solution_image, str(solver.board[i, j]), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
 
     cv2.imshow("Solved Sudoku", solution_image)
     cv2.waitKey(0)
@@ -135,4 +135,4 @@ def main():
     
 
 if __name__ == "__main__":
-    main()  
+    main()
